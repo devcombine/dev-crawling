@@ -17,7 +17,7 @@ def parse_detail(detail_url: str) -> dict:
     url 상세 페이지 파싱 함수
     포함된 정보 : title', 'instructor', 'description', 'url', 'price', 'tag', 'category', 'rating', 'thumbnail_url', 'is_package', 'is_free', 'enrollment_count', 'uploade_date'
     """
-    
+
     row_template = dict.fromkeys(header)  # 딕셔너리 초기화
     path_res = requests.get(detail_url)
     path_soup = BeautifulSoup(path_res.content, 'html.parser')
@@ -63,7 +63,7 @@ def parse_detail(detail_url: str) -> dict:
 
 
 # tsv 파일 쓰기 -> String의 , 공백으로 tsv 저장
-os.makedirs('./result/', exist_ok=True
+os.makedirs('./result/', exist_ok=True)
 f = open('./result/' + f'{now}_groomedu.tsv', 'w', newline='')
 wr = csv.writer(f, delimiter='\t')
 wr.writerow(header)
