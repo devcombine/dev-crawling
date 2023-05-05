@@ -113,7 +113,7 @@ with webdriver.Chrome(service=Service(ChromeDriverManager().install())) as drive
             try:
                 price = driver.find_element(By.XPATH, f'//*[@id="edu-service-app-main"]/div/div[2]/div/div/section[2]/a[{si}]/div[2]/div[2]/div[1]/strong').text
                 price = price.replace("₩", "").replace(",", "")
-                price = '0' if price == "무료" else price
+                price = 0 if price == "무료" else int(price)
             except NoSuchElementException:
                 price = None
             try:
@@ -167,6 +167,5 @@ with webdriver.Chrome(service=Service(ChromeDriverManager().install())) as drive
         time.sleep(1)
 
     f.close()
-
+    
 print('저장이 완료되었습니다.')
-
