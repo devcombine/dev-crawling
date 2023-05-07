@@ -397,7 +397,7 @@ def inflearn_crawl():
                 'price': course_price, 
                 'tags': course_tag, 
                 'rating': course_rate,
-                'thumbnail_url':'https://www.google.com/url?sa=i&url=https%3A%2F%2Fin.naver.com%2Finflearn&psig=AOvVaw3sQrpgV2EzIZhQwrZJVrFF&ust=1683314596419000&source=images&cd=vfe&ved=0CBEQjRxqFwoTCJC329ax3P4CFQAAAAAdAAAAABAY',
+                'thumbnail_url':'https://file.mk.co.kr/meet/neds/2022/05/image_readtop_2022_476589_16538895495059468.jpg',
                 'is_package': False,
                 'is_free': course_is_free,
                 'enrollment_count':0,
