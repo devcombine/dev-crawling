@@ -68,6 +68,7 @@ def goorm_crawl():
                     answer.text.replace(' ', '').split(','))[-1].replace('-', ',')
             if tags:
                 tags_list.append(tags)
+        tags_list.append('구름에듀')
         row_template['tags'] = ','.join(tags_list)
         # 가격 관련 변수
         price = path_soup.find(
@@ -274,6 +275,9 @@ def programmers_crawl():
                         instructor = driver.find_element(By.CLASS_NAME, "mentor-name").text
                     except NoSuchElementException:
                         instructor = None
+                
+                # 사이트 태그 추가
+                courses[title].add('프로그래머스')
 
                 row_template = dict.fromkeys(header)
                 row_template['site'] = '프로그래머스'
@@ -317,8 +321,7 @@ def inflearn_crawl():
     course_name = []
     course_rate = []
     course_tag = []
-    course_lan = []
-    course_level = []
+    course_thumbnail = []
     course_ins = []
     course_rev_cnt = []
     course_vat_price = []
@@ -340,52 +343,30 @@ def inflearn_crawl():
                 url = aTag.get_attribute('href')
                 course_urls.append(url)
 
-    # 강의명
-    i = 0
-    for course in course_data:
+            # thumbnail
+            elements = driver.find_elements(By.CLASS_NAME, "card-image")
+            for element in elements:
+                try:
+                    thumbnail = element.find_element(By.CLASS_NAME, "swiper-lazy").get_attribute('src')
+                    course_thumbnail.append(thumbnail)
+                except:
+                    course_thumbnail.append('https://file.mk.co.kr/meet/neds/2022/05/image_readtop_2022_476589_16538895495059468.jpg')            
+
+    # 수집
+    for i, course in enumerate(course_data):         
         course_name.append(course[course_data[i].find('"course_title\":"')+16:course_data[i].find('","course_level":')])
-        i += 1
-
-    # 별점
-    i = 0
-    for course in course_data:
         course_rate.append(course[course_data[i].find('"star_rate":')+12:course_data[i].find(',"review_count":')])
-        i += 1
-
-    # 카테고리
-    i = 0
-    for course in course_data:
         cate = course[course_data[i].find('"second_category":"')+19:course_data[i].find('","skill_tag":')]
         lang = course[course_data[i].find('"skill_tag":"')+13:course_data[i].find('","seq0_instructor_id":')]
         level = course[course_data[i].find('"course_level":"')+16:course_data[i].find('","first_category":')]
-        course_tag.append(','.join([cate, lang, level]).replace(" · ", ",").lower())
-        i += 1
-
-    # 강사명
-    i = 0
-    for course in course_data:
+        course_tag.append(','.join([cate, lang, level, '인프런']).replace(" · ", ",").lower())
         course_ins.append(course[course_data[i].find('"seq0_instructor_name":"')+24:course_data[i].find('","student_count":')])
-        i += 1
-
-    # 후기 개수
-    i = 0
-    for course in course_data:
         course_rev_cnt.append(course[course_data[i].find('"review_count":')+15:course_data[i].find(',"is_new_course":')])
-        i += 1
-
-    # 원가 가격
-    i = 0
-    for course in course_data:
         course_vat_price.append(course[course_data[i].find('"reg_vat_price":')+16:course_data[i].find(',"selling_price":')])
-        i += 1
-
-    # 현재 가격
-    i = 0
-    for course in course_data:
         price = course[course_data[i].find('"reg_price":')+12:course_data[i].find(',"reg_vat_price":')]
         course_price.append(course[course_data[i].find('"reg_price":')+12:course_data[i].find(',"reg_vat_price":')])
         course_is_free.append(True if price == 0 else False)
-        i += 1
+
         
     # 데이터프레임
     # ['title', 'instructor', 'description', 'url', 'price', 'tags', 'category','rating', 'thumbnail_url', 'is_package', 'is_free', 'enrollment_count']
@@ -397,7 +378,7 @@ def inflearn_crawl():
                 'price': course_price, 
                 'tags': course_tag, 
                 'rating': course_rate,
-                'thumbnail_url':'https://file.mk.co.kr/meet/neds/2022/05/image_readtop_2022_476589_16538895495059468.jpg',
+                'thumbnail_url': course_thumbnail,
                 'is_package': False,
                 'is_free': course_is_free,
                 'enrollment_count':0,
@@ -423,6 +404,7 @@ def main():
     for file in files:
         # 각 파일의 헤더 행을 지정하여 파일을 읽어옵니다.
         df = pd.read_csv(file)  # 헤더가 없는 경우
+        df['tags'] = df['tags'].fillna('')
         data.append(df)
         os.remove(file)
     
@@ -431,6 +413,95 @@ def main():
     # 통합파일 저장
     result.to_csv('./result/' + f'{now}_devcombine.csv',index=False, mode='w',encoding="utf-8-sig")
 
+
+    '''
+    csv 파일로 저장할 때 사용
+
+    # 1. 데이터의 태그 데이터를 읽는다.
+    # 2. raw 태그 데이터를 tag_mapping 으로 정제된 tag로 변환한다.
+    # 3. tag.csv 파일로 저장하여 admin에서 import할 수 있도록 한다.
+    # 3. 강의 데이터의 태그 데이터를 
+
+    tag_set = set()
+    tag_str = (','.join(result['tags'].to_list())).replace(',','-')
+    tag_set.update(tag_str.split('-'))
+    tag_list = list(tag_set)
+    tag_list.sort()
+
+    # 매핑 딕셔너리 코드 생성
+    dict_text = '{' + ', '.join(f" \n '{tag}': ''" for tag in tag_list) + '}'
+    print(dict_text)
+
+    new_tags = [tag_mapping.get(tag, tag) for tag in tag_list]
+    new_tags = list(set(new_tags))
+    new_tags.sort()
+
+    def get_newtag(tag):
+        return tag_mapping.get(tag, '')
+
+    def get_tagid(tag):
+        return new_tags.index(tag) + 1    
+
+    # Tag 테이블 데이터
+    f = open('tag.csv','w',encoding="utf-8-sig")
+    cssWriter = csv.writer(f)
+    tag_header = ['id','name']
+    cssWriter.writerow(tag_header)
+    for i, new_tag in enumerate(new_tags):
+        row_template = dict.fromkeys(tag_header)
+        row_template["id"] = i + 1
+        row_template["name"] = new_tag
+        cssWriter.writerow(list(row_template.values()))
+    f.close()
+    
+    # 2
+    course_file = open('course.csv','w',encoding="utf-8-sig")
+    course_writer = csv.writer(course_file)
+    course_header = ['id', 'title', 'instructor', 'description', 'site', 'url', 'price', 'rating', 'thumbnail_url', 'is_package', 'is_free', 'enrollment_count', 'upload_date', 'likes', 'dislikes']
+    course_writer.writerow(course_header)
+
+    course_tag_file = open('course_tag.csv','w',encoding="utf-8-sig")
+    course_tag_writer = csv.writer(course_tag_file)
+    course_tag_header = ['id','course','tag']
+    course_tag_writer.writerow(course_tag_header)
+    course_tag_idx = 1
+
+    # Course 테이블 데이터
+    for i, row in df.iterrows():
+        row_template = dict.fromkeys(course_header)
+        row_template["id"] = i + 1
+        row_template["title"] = row['title']
+        row_template["instructor"] = '' if pd.isna(row['instructor']) else row['instructor']
+        row_template["description"] = '' if pd.isna(row['description']) else row['description']
+        row_template["site"] = row['site']
+        row_template["url"] = row['url']
+        row_template["price"] = '' if pd.isna(row['price']) else row['price']
+        row_template["rating"] = '' if pd.isna(row['rating']) else row['rating']
+        row_template["thumbnail_url"] = '' if pd.isna(row['thumbnail_url']) else row['thumbnail_url']
+        row_template["is_package"] = '' if pd.isna(row['is_package']) else row['is_package']
+        row_template["is_free"] = '' if pd.isna(row['is_free']) else row['is_free']
+        row_template["enrollment_count"] = '' if pd.isna(row['enrollment_count']) else row['enrollment_count']
+        row_template["upload_date"] = None
+        row_template["likes"] = None
+        row_template["dislikes"] = None
+        course_writer.writerow(list(row_template.values()))
+
+        # CourseTag 테이블 데이터
+        old_tags = row["tags"].replace(',','-').split('-')
+        for old_tag in old_tags:
+            if old_tag:
+                row_template = dict.fromkeys(course_tag_header)
+                row_template["id"] = course_tag_idx
+                row_template["course"] = i + 1
+                new_tag = get_newtag(old_tag)
+                if new_tag:
+                    row_template["tag"] = get_tagid(new_tag)
+                    course_tag_writer.writerow(list(row_template.values()))
+                    course_tag_idx += 1
+
+    course_tag_file.close()    
+    course_file.close()  
+'''
 
 if __name__ == "__main__":
     main()
